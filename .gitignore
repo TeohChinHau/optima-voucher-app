@@ -1,0 +1,16 @@
+# Frontend
+optima-voucher-web/node_modules/
+optima-voucher-web/dist/
+
+# Backend
+OptimaVoucherApi/bin/
+OptimaVoucherApi/obj/
+
+# Secrets - never commit these
+OptimaVoucherApi/appsettings.Development.json
+**/appsettings.json
+
+# Editor/OS
+.vscode/
+.DS_Store
+Thumbs.db
