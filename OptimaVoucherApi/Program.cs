@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
-        policy.WithOrigins("http://localhost:5173", "https://optima-voucher-web.vercel.app")
+        policy.WithOrigins("http://localhost:5173", "https://optima-voucher-app.vercel.app")
               .AllowAnyHeader().AllowAnyMethod()));
 
 builder.Services.AddControllers()
