@@ -99,7 +99,7 @@ export default function ProfilePage() {
             <div className="w-24 h-24 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center">
               {pictureUrl ? (
                 <img
-                  src={`http://localhost:5215${pictureUrl}`}
+                  src={`https://optima-voucher-app.onrender.com${pictureUrl}`}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
