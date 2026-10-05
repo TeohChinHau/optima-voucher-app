@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { User, Mail, Lock } from "lucide-react";
 import { signup } from "../api/authApi";
 import { useToast } from "../context/ToastContext";
+import Button from "../components/Button";
+import Input from "../components/Input";
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
@@ -13,8 +15,11 @@ export default function SignUpPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (password !== confirmPassword) {
       showToast("Passwords do not match", "error");
@@ -25,6 +30,7 @@ export default function SignUpPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const res = await signup(email, password, fullName);
       if (res.data.success) {
@@ -36,6 +42,8 @@ export default function SignUpPage() {
         err.response?.data?.message || "Something went wrong. Try again.",
         "error",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -50,65 +58,41 @@ export default function SignUpPage() {
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div className="relative mb-4">
-            <User
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
+          <Input
+            icon={User}
+            type="text"
+            placeholder="Full Name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+          />
 
-          <div className="relative mb-4">
-            <Mail
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
+          <Input
+            icon={Mail}
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-          <div className="relative mb-4">
-            <Lock
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
+          <Input
+            icon={Lock}
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-          <div className="relative mb-4">
-            <Lock
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="password"
-              placeholder="Retype Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
+          <Input
+            icon={Lock}
+            type="password"
+            placeholder="Retype Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
 
           <label className="flex items-center gap-2 text-sm text-slate-300 mb-6 cursor-pointer">
             <input
@@ -123,12 +107,9 @@ export default function SignUpPage() {
             </span>
           </label>
 
-          <button
-            type="submit"
-            className="w-full bg-orange-500 text-slate-900 rounded-full py-3 font-bold hover:bg-orange-400 transition"
-          >
-            Sign Up
-          </button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating account..." : "Sign Up"}
+          </Button>
 
           <p className="text-sm mt-5 text-slate-400">
             Have an account?{" "}

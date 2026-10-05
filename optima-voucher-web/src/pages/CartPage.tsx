@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getCart, updateCartQuantity, removeFromCart } from "../api/cartApi";
 import type { CartItem } from "../types";
+import Button from "../components/Button";
 
 export default function CartPage() {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -97,12 +98,7 @@ export default function CartPage() {
               <span className="text-orange-500 font-bold text-lg">{totalPoints} pts</span>
             </div>
 
-            <button
-              onClick={() => navigate("/checkout")}
-              className="w-full bg-orange-500 text-white rounded py-3 font-semibold hover:bg-orange-600"
-            >
-              Proceed to Checkout
-            </button>
+            <Button onClick={() => navigate("/checkout")}>Proceed to Checkout</Button>
           </>
         )}
       </div>

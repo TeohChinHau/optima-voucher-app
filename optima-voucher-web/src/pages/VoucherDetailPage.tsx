@@ -5,6 +5,7 @@ import { addToCart } from "../api/cartApi";
 import type { Voucher } from "../types";
 import { useToast } from "../context/ToastContext";
 import { ShoppingCart } from "lucide-react";
+import Button from "../components/Button";
 
 export default function VoucherDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,18 +86,16 @@ export default function VoucherDetailPage() {
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
+              variant="outline"
               onClick={handleAddToCart}
-              className="flex-1 border border-orange-500 text-orange-500 rounded py-2 font-semibold hover:bg-orange-50"
+              className="flex-1"
             >
               Add to Cart
-            </button>
-            <button
-              onClick={handleRedeemNow}
-              className="flex-1 bg-orange-500 text-white rounded py-2 font-semibold hover:bg-orange-600"
-            >
+            </Button>
+            <Button onClick={handleRedeemNow} className="flex-1">
               Redeem Now
-            </button>
+            </Button>
           </div>
         </div>
       </div>

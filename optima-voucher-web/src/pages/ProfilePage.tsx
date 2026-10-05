@@ -9,6 +9,8 @@ import {
 } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import Button from "../components/Button";
+import { API_BASE_URL } from "../api/client";
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
@@ -99,7 +101,7 @@ export default function ProfilePage() {
             <div className="w-24 h-24 rounded-full bg-slate-700 overflow-hidden flex items-center justify-center">
               {pictureUrl ? (
                 <img
-                  src={`https://optima-voucher-app.onrender.com${pictureUrl}`}
+                  src={`${API_BASE_URL}${pictureUrl}`}
                   alt="Profile"
                   className="w-full h-full object-cover"
                 />
@@ -161,12 +163,7 @@ export default function ProfilePage() {
             {points.toLocaleString()} pts
           </p>
 
-          <button
-            onClick={handleSave}
-            className="w-full bg-orange-500 text-slate-900 rounded-full py-2 font-bold hover:bg-orange-400"
-          >
-            Save Changes
-          </button>
+          <Button onClick={handleSave}>Save Changes</Button>
         </div>
 
         {/* Change password */}
@@ -188,12 +185,9 @@ export default function ProfilePage() {
             className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-orange-400"
           />
 
-          <button
-            onClick={handleChangePassword}
-            className="w-full border border-orange-500 text-orange-400 rounded-full py-2 font-semibold hover:bg-orange-500/10"
-          >
+          <Button onClick={handleChangePassword} variant="secondary">
             Update Password
-          </button>
+          </Button>
         </div>
       </div>
     </div>

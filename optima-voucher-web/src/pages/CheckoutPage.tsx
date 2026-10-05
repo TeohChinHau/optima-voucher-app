@@ -4,6 +4,7 @@ import client from "../api/client";
 import { getCart, downloadRedemptionPdf } from "../api/cartApi";
 import { useAuth } from "../context/AuthContext";
 import type { CartItem, ApiResponse } from "../types";
+import Button from "../components/Button";
 
 interface RedeemedItem {
   id: number;
@@ -107,13 +108,13 @@ export default function CheckoutPage() {
               Your balance: {points.toLocaleString()} pts
             </p>
 
-            <button
+            <Button
               onClick={handleCheckout}
               disabled={processing || items.length === 0}
-              className="w-full bg-orange-500 text-white rounded py-3 font-semibold hover:bg-orange-600 mt-6 disabled:opacity-50"
+              className="mt-6"
             >
               {processing ? "Processing..." : "Confirm & Redeem"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

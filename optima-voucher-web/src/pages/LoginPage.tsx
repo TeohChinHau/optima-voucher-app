@@ -4,6 +4,8 @@ import { Mail, Lock } from "lucide-react";
 import { login } from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import Button from "../components/Button";
+import Input from "../components/Input";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,9 +14,12 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const res = await login(email, password);
       if (res.data.success && res.data.data) {
@@ -27,6 +32,8 @@ export default function LoginPage() {
       }
     } catch {
       showToast("Invalid email or password", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -45,37 +52,23 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="w-full max-w-sm">
           <h2 className="text-3xl font-bold text-white mb-8">Login</h2>
 
-          
+          <Input
+            icon={Mail}
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-          <div className="relative mb-4">
-            <Mail
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
-
-          <div className="relative mb-2">
-            <Lock
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-800 text-white border border-slate-700 rounded-full pl-11 pr-4 py-3 focus:outline-none focus:border-orange-400"
-              required
-            />
-          </div>
+          <Input
+            icon={Lock}
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           <div className="text-right mb-6">
             <Link
@@ -86,12 +79,9 @@ export default function LoginPage() {
             </Link>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-orange-500 text-slate-900 rounded-full py-3 font-bold hover:bg-orange-400 transition"
-          >
-            Login
-          </button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Logging in..." : "Login"}
+          </Button>
 
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-slate-700" />

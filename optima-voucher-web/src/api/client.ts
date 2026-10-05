@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const client = axios.create({ baseURL: "https://optima-voucher-app.onrender.com/api" });
+export const API_BASE_URL = "http://localhost:5215";
+
+const client = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
