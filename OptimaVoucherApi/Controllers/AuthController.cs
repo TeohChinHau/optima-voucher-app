@@ -9,6 +9,7 @@ using OptimaVoucherApi.DTOs;
 using OptimaVoucherApi.Models;
 using OptimaVoucherApi.Common;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace OptimaVoucherApi.Controllers;
 
@@ -25,6 +26,7 @@ public class AuthController : ControllerBase
         _config = config;
     }
 
+    [EnableRateLimiting("auth")]
     [HttpPost("signup")]
     public async Task<IActionResult> Signup(SignupRequest req)
     {
@@ -44,6 +46,7 @@ public class AuthController : ControllerBase
         return Ok(new ApiResponse<object> { Success = true, Message = "Account created" });
     }
 
+    [EnableRateLimiting("auth")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest req)
     {
@@ -61,83 +64,83 @@ public class AuthController : ControllerBase
     }
 
     [Authorize]
-[HttpGet("me")]
-public async Task<IActionResult> GetProfile()
-{
-    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    var user = await _db.Users.FindAsync(userId);
-    if (user == null) return NotFound();
-    return Ok(new ApiResponse<object>
+    [HttpGet("me")]
+    public async Task<IActionResult> GetProfile()
     {
-        Success = true,
-        Data = new
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+        return Ok(new ApiResponse<object>
         {
-            user.FullName,
-            user.Email,
-            user.Points,
-            user.MembershipTier,
-            user.Gender,
-            user.ProfilePictureUrl
-        }
-    });
-}
-
-[Authorize]
-[HttpPut("me")]
-public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
-{
-    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    var user = await _db.Users.FindAsync(userId);
-    if (user == null) return NotFound();
-    user.FullName = req.FullName;
-    user.Gender = req.Gender;
-    await _db.SaveChangesAsync();
-    return Ok(new ApiResponse<object> { Success = true, Message = "Profile updated" });
-}
-
-[Authorize]
-[HttpPost("change-password")]
-public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
-{
-    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    var user = await _db.Users.FindAsync(userId);
-    if (user == null) return NotFound();
-
-    if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.PasswordHash))
-        return BadRequest(new ApiResponse<object> { Success = false, Message = "Current password is incorrect" });
-
-    user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
-    await _db.SaveChangesAsync();
-    return Ok(new ApiResponse<object> { Success = true, Message = "Password changed successfully" });
-}
-
-[Authorize]
-[HttpPost("profile-picture")]
-public async Task<IActionResult> UploadProfilePicture(IFormFile file)
-{
-    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    var user = await _db.Users.FindAsync(userId);
-    if (user == null) return NotFound();
-
-    if (file == null || file.Length == 0)
-        return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
-
-    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-    Directory.CreateDirectory(uploadsFolder);
-
-    var fileName = $"user-{userId}-{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-    var filePath = Path.Combine(uploadsFolder, fileName);
-
-    using (var stream = new FileStream(filePath, FileMode.Create))
-    {
-        await file.CopyToAsync(stream);
+            Success = true,
+            Data = new
+            {
+                user.FullName,
+                user.Email,
+                user.Points,
+                user.MembershipTier,
+                user.Gender,
+                user.ProfilePictureUrl
+            }
+        });
     }
 
-    user.ProfilePictureUrl = $"/uploads/{fileName}";
-    await _db.SaveChangesAsync();
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+        user.FullName = req.FullName;
+        user.Gender = req.Gender;
+        await _db.SaveChangesAsync();
+        return Ok(new ApiResponse<object> { Success = true, Message = "Profile updated" });
+    }
 
-    return Ok(new ApiResponse<object> { Success = true, Data = new { url = user.ProfilePictureUrl } });
-}
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.PasswordHash))
+            return BadRequest(new ApiResponse<object> { Success = false, Message = "Current password is incorrect" });
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+        await _db.SaveChangesAsync();
+        return Ok(new ApiResponse<object> { Success = true, Message = "Password changed successfully" });
+    }
+
+    [Authorize]
+    [HttpPost("profile-picture")]
+    public async Task<IActionResult> UploadProfilePicture(IFormFile file)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null) return NotFound();
+
+        if (file == null || file.Length == 0)
+            return BadRequest(new ApiResponse<object> { Success = false, Message = "No file uploaded" });
+
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        Directory.CreateDirectory(uploadsFolder);
+
+        var fileName = $"user-{userId}-{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        user.ProfilePictureUrl = $"/uploads/{fileName}";
+        await _db.SaveChangesAsync();
+
+        return Ok(new ApiResponse<object> { Success = true, Data = new { url = user.ProfilePictureUrl } });
+    }
 
     private string GenerateToken(User user)
     {
