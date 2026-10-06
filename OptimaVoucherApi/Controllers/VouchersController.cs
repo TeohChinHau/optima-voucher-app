@@ -13,24 +13,32 @@ public class VouchersController : ControllerBase
     public VouchersController(AppDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+    [FromQuery] string? search,
+    [FromQuery] int? categoryId,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 12)
     {
-        var vouchers = await _db.Vouchers.Include(v => v.Category).ToListAsync();
-        return Ok(new ApiResponse<object> { Success = true, Data = vouchers });
-    }
+        var query = _db.Vouchers.Include(v => v.Category).AsQueryable();
 
-    [HttpGet("category/{categoryId}")]
-    public async Task<IActionResult> GetByCategory(int categoryId)
-    {
-        var vouchers = await _db.Vouchers.Where(v => v.CategoryId == categoryId).ToListAsync();
-        return Ok(new ApiResponse<object> { Success = true, Data = vouchers });
-    }
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(v => v.Title.Contains(search));
 
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string q)
-    {
-        var vouchers = await _db.Vouchers.Where(v => v.Title.Contains(q)).ToListAsync();
-        return Ok(new ApiResponse<object> { Success = true, Data = vouchers });
+        if (categoryId.HasValue)
+            query = query.Where(v => v.CategoryId == categoryId.Value);
+
+        var totalCount = await query.CountAsync();
+
+        var vouchers = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new ApiResponse<object>
+        {
+            Success = true,
+            Data = new { items = vouchers, totalCount, page, pageSize }
+        });
     }
 
     [HttpGet("{id}")]
@@ -39,5 +47,12 @@ public class VouchersController : ControllerBase
         var voucher = await _db.Vouchers.Include(v => v.Category).FirstOrDefaultAsync(v => v.Id == id);
         if (voucher == null) return NotFound(new ApiResponse<object> { Success = false, Message = "Not found" });
         return Ok(new ApiResponse<object> { Success = true, Data = voucher });
+    }
+
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        var categories = await _db.VoucherCategories.ToListAsync();
+        return Ok(new ApiResponse<object> { Success = true, Data = categories });
     }
 }

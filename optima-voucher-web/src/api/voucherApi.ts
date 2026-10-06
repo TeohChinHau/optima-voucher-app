@@ -1,11 +1,22 @@
 import client from "./client";
-import type { ApiResponse, Voucher } from "../types";
+import type { ApiResponse, Voucher, VoucherCategory } from "../types";
 
-export const getAllVouchers = () =>
-  client.get<ApiResponse<Voucher[]>>("/vouchers");
+interface PaginatedVouchers {
+  items: Voucher[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export const getVouchers = (params: {
+  search?: string;
+  categoryId?: number;
+  page?: number;
+  pageSize?: number;
+}) => client.get<ApiResponse<PaginatedVouchers>>("/vouchers", { params });
 
 export const getVoucherById = (id: number) =>
   client.get<ApiResponse<Voucher>>(`/vouchers/${id}`);
 
-export const getVouchersByCategory = (categoryId: number) =>
-  client.get<ApiResponse<Voucher[]>>(`/vouchers/category/${categoryId}`);
+export const getCategories = () =>
+  client.get<ApiResponse<VoucherCategory[]>>("/vouchers/categories");

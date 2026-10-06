@@ -1,42 +1,62 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { getAllVouchers } from "../api/voucherApi";
-import type { Voucher } from "../types";
-import { ShoppingCart } from "lucide-react";
+import { getVouchers, getCategories } from "../api/voucherApi";
+import { useDebounce } from "../hooks/useDebounce";
+import type { Voucher, VoucherCategory } from "../types";
+
+const PAGE_SIZE = 12;
 
 export default function VoucherSelectionPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [categories, setCategories] = useState<VoucherCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const categoryFilter = searchParams.get("category") || "All";
+  const categoryParam = searchParams.get("category");
+  const debouncedSearch = useDebounce(searchTerm, 400);
 
+  // Load categories once
   useEffect(() => {
-    getAllVouchers()
-      .then((res) => {
-        if (res.data.success && res.data.data) setVouchers(res.data.data);
-      })
-      .finally(() => setLoading(false));
+    getCategories().then((res) => {
+      if (res.data.success && res.data.data) setCategories(res.data.data);
+    });
   }, []);
 
-  const categories = ["All", ...Array.from(new Set(vouchers.map((v) => v.category?.name || "Other")))];
+  // Reset to page 1 whenever search or category changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, categoryParam]);
 
-  const filtered = vouchers.filter((v) => {
-    const matchesCategory =
-      categoryFilter === "All" ? true : (v.category?.name || "Other") === categoryFilter;
-    const matchesSearch = v.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // Fetch vouchers whenever search, category, or page changes
+  useEffect(() => {
+    setLoading(true);
+    const selectedCategory = categories.find((c) => c.name === categoryParam);
 
-  const handleCategoryClick = (cat: string) => {
-    if (cat === "All") {
-      setSearchParams({});
-    } else {
-      setSearchParams({ category: cat });
-    }
+    getVouchers({
+      search: debouncedSearch || undefined,
+      categoryId: selectedCategory?.id,
+      page,
+      pageSize: PAGE_SIZE,
+    })
+      .then((res) => {
+        if (res.data.success && res.data.data) {
+          setVouchers(res.data.data.items);
+          setTotalCount(res.data.data.totalCount);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [debouncedSearch, categoryParam, page, categories]);
+
+  const handleCategoryClick = (catName: string) => {
+    if (catName === "All") setSearchParams({});
+    else setSearchParams({ category: catName });
   };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -44,9 +64,9 @@ export default function VoucherSelectionPage() {
         <Link to="/dashboard" className="text-sm text-orange-400 hover:underline">
           ← Back
         </Link>
-        <h1 className="text-lg font-bold">{categoryFilter === "All" ? "All Vouchers" : categoryFilter}</h1>
-        <Link to="/cart" className="text-orange-400 hover:text-orange-300">
-          <ShoppingCart size={20} />
+        <h1 className="text-lg font-bold">{categoryParam || "All Vouchers"}</h1>
+        <Link to="/cart" className="text-sm text-orange-400 hover:underline">
+          Cart
         </Link>
       </div>
 
@@ -59,44 +79,77 @@ export default function VoucherSelectionPage() {
           className="w-full border rounded px-4 py-2 mb-4"
         />
 
-        {/* Category filter pills */}
         <div className="flex gap-2 mb-6 flex-wrap">
+          <button
+            onClick={() => handleCategoryClick("All")}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              !categoryParam
+                ? "bg-orange-500 text-white"
+                : "bg-white text-slate-600 border hover:bg-slate-50"
+            }`}
+          >
+            All
+          </button>
           {categories.map((cat) => (
             <button
-              key={cat}
-              onClick={() => handleCategoryClick(cat)}
+              key={cat.id}
+              onClick={() => handleCategoryClick(cat.name)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                categoryFilter === cat
+                categoryParam === cat.name
                   ? "bg-orange-500 text-white"
                   : "bg-white text-slate-600 border hover:bg-slate-50"
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
 
         {loading ? (
           <p>Loading...</p>
-        ) : filtered.length === 0 ? (
+        ) : vouchers.length === 0 ? (
           <p className="text-slate-500">No vouchers found.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {filtered.map((v) => (
-              <div
-                key={v.id}
-                onClick={() => navigate(`/vouchers/${v.id}`)}
-                className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
-              >
-                <h3 className="font-semibold">{v.title}</h3>
-                <p className="text-sm text-slate-500 mt-1">{v.description}</p>
-                <div className="flex justify-between items-center mt-3">
-                  <span className="text-orange-500 font-bold">{v.pointsCost} pts</span>
-                  <span className="text-xs text-slate-400">{v.stockQuantity} left</span>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {vouchers.map((v) => (
+                <div
+                  key={v.id}
+                  onClick={() => navigate(`/vouchers/${v.id}`)}
+                  className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition"
+                >
+                  <h3 className="font-semibold">{v.title}</h3>
+                  <p className="text-sm text-slate-500 mt-1">{v.description}</p>
+                  <div className="flex justify-between items-center mt-3">
+                    <span className="text-orange-500 font-bold">{v.pointsCost} pts</span>
+                    <span className="text-xs text-slate-400">{v.stockQuantity} left</span>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 rounded border disabled:opacity-40 bg-white"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-slate-600">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-4 py-2 rounded border disabled:opacity-40 bg-white"
+                >
+                  Next
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,36 +1,43 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Search, LogOut, Coins, Crown, User, ShoppingCart } from "lucide-react";
-import { getAllVouchers } from "../api/voucherApi";
+import { getVouchers, getCategories } from "../api/voucherApi";
 import { useAuth } from "../context/AuthContext";
-import type { Voucher } from "../types";
+import type { Voucher, VoucherCategory } from "../types";
 
 export default function DashboardPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [categories, setCategories] = useState<VoucherCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("All");
   const { fullName, points, logout } = useAuth();
   const navigate = useNavigate();
 
+  // Load categories once
   useEffect(() => {
-    getAllVouchers()
+    getCategories().then((res) => {
+      if (res.data.success && res.data.data) setCategories(res.data.data);
+    });
+  }, []);
+
+  // Load vouchers whenever the selected category changes
+  useEffect(() => {
+    setLoading(true);
+    getVouchers({
+      categoryId: selectedCategoryId ?? undefined,
+      page: 1,
+      pageSize: 8,
+    })
       .then((res) => {
-        if (res.data.success && res.data.data) setVouchers(res.data.data);
+        if (res.data.success && res.data.data) setVouchers(res.data.data.items);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedCategoryId]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-
-  const categories = ["All", ...Array.from(new Set(vouchers.map((v) => v.category?.name || "Other")))];
-
-  const filteredVouchers =
-    selectedCategory === "All"
-      ? vouchers
-      : vouchers.filter((v) => (v.category?.name || "Other") === selectedCategory);
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
@@ -113,28 +120,38 @@ export default function DashboardPage() {
 
         {/* Category filter pills */}
         <div className="flex gap-2 mb-6 flex-wrap">
+          <button
+            onClick={() => setSelectedCategoryId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
+              selectedCategoryId === null
+                ? "bg-orange-500 text-slate-900"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+            }`}
+          >
+            All
+          </button>
           {categories.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.id}
+              onClick={() => setSelectedCategoryId(cat.id)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                selectedCategory === cat
+                selectedCategoryId === cat.id
                   ? "bg-orange-500 text-slate-900"
                   : "bg-slate-800 text-slate-300 hover:bg-slate-700"
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
 
         {loading ? (
           <p className="text-slate-400">Loading...</p>
-        ) : filteredVouchers.length === 0 ? (
+        ) : vouchers.length === 0 ? (
           <p className="text-slate-400">No vouchers in this category.</p>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {filteredVouchers.slice(0, 8).map((v) => (
+            {vouchers.map((v) => (
               <div
                 key={v.id}
                 onClick={() => navigate(`/vouchers/${v.id}`)}
