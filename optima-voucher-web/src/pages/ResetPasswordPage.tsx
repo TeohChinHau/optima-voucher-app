@@ -5,6 +5,7 @@ import { resetPassword } from "../api/authApi";
 import { useToast } from "../context/ToastContext";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import { validatePassword } from "../utils/validatePassword";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -19,8 +20,9 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     if (isSubmitting || !token) return;
 
-    if (newPassword.length < 8) {
-      showToast("Password must be at least 8 characters", "error");
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      showToast(passwordError, "error");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -58,8 +60,12 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-8">
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
         <img src="/logo.png" alt="Optima Bank" className="h-16 mb-8" />
-        <h2 className="text-3xl font-bold text-white mb-2">Set a new password</h2>
-        <p className="text-slate-400 mb-8">Choose a password you haven't used before.</p>
+        <h2 className="text-3xl font-bold text-white mb-2">
+          Set a new password
+        </h2>
+        <p className="text-slate-400 mb-8">
+          Choose a password you haven't used before.
+        </p>
 
         <Input
           icon={Lock}
@@ -82,7 +88,10 @@ export default function ResetPasswordPage() {
           {isSubmitting ? "Resetting..." : "Reset Password"}
         </Button>
 
-        <Link to="/login" className="block text-center text-orange-400 text-sm mt-6 hover:underline">
+        <Link
+          to="/login"
+          className="block text-center text-orange-400 text-sm mt-6 hover:underline"
+        >
           Back to Login
         </Link>
       </form>

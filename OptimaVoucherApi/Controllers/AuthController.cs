@@ -11,6 +11,7 @@ using OptimaVoucherApi.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Cryptography;
+using OptimaVoucherApi.Services;
 
 namespace OptimaVoucherApi.Controllers;
 
@@ -20,17 +21,27 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
+    private readonly IEmailService _email;
+    private readonly IWebHostEnvironment _env;
 
-    public AuthController(AppDbContext db, IConfiguration config)
+    public AuthController(AppDbContext db, IConfiguration config, IEmailService email, IWebHostEnvironment env)
     {
         _db = db;
         _config = config;
+        _email = email;
+        _env = env;
     }
+
+
 
     [EnableRateLimiting("auth")]
     [HttpPost("signup")]
     public async Task<IActionResult> Signup(SignupRequest req)
     {
+        var passwordError = PasswordValidator.Validate(req.Password);   // req.NewPassword in the other two
+        if (passwordError != null)
+            return BadRequest(new ApiResponse<object> { Success = false, Message = passwordError });
+
         if (await _db.Users.AnyAsync(u => u.Email == req.Email))
             return BadRequest(new ApiResponse<object> { Success = false, Message = "Email already registered" });
 
@@ -103,6 +114,10 @@ public class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
     {
+        var passwordError = PasswordValidator.Validate(req.NewPassword);
+        if (passwordError != null)
+            return BadRequest(new ApiResponse<object> { Success = false, Message = passwordError });
+
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
@@ -159,9 +174,22 @@ public class AuthController : ControllerBase
             user.PasswordResetExpiry = DateTime.UtcNow.AddMinutes(15);
             await _db.SaveChangesAsync();
 
-            var link = $"http://localhost:5173/reset-password?token={rawToken}";
-            // TODO: replace with a real email send (Resend/SendGrid)
-            Console.WriteLine($"[DEV] Password reset link for {user.Email}: {link}");
+            var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+            var link = $"{frontendUrl}/reset-password?token={rawToken}";
+
+            // Dev convenience only: reset links must never end up in production logs
+            if (_env.IsDevelopment())
+                Console.WriteLine($"[DEV] Password reset link for {user.Email}: {link}");
+
+            try
+            {
+                await _email.SendPasswordResetAsync(user.Email, link);
+            }
+            catch (Exception ex)
+            {
+                // Swallow on purpose: returning an error here would reveal that the account exists
+                Console.Error.WriteLine($"Reset email failed: {ex.Message}");
+            }
         }
 
         // Same response either way, so attackers can't discover which emails exist
@@ -176,6 +204,10 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
     {
+        var passwordError = PasswordValidator.Validate(req.NewPassword);
+        if (passwordError != null)
+            return BadRequest(new ApiResponse<object> { Success = false, Message = passwordError });
+
         var hash = HashToken(req.Token);
         var user = await _db.Users.FirstOrDefaultAsync(u =>
             u.PasswordResetTokenHash == hash && u.PasswordResetExpiry > DateTime.UtcNow);
@@ -212,4 +244,6 @@ public class AuthController : ControllerBase
         );
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+
 }

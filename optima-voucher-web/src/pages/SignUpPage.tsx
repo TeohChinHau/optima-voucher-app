@@ -5,6 +5,7 @@ import { signup } from "../api/authApi";
 import { useToast } from "../context/ToastContext";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import { validatePassword } from "../utils/validatePassword";
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
@@ -21,6 +22,11 @@ export default function SignUpPage() {
     e.preventDefault();
     if (isSubmitting) return;
 
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      showToast(passwordError, "error");
+      return;
+    }
     if (password !== confirmPassword) {
       showToast("Passwords do not match", "error");
       return;
@@ -84,6 +90,9 @@ export default function SignUpPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          <p className="text-xs text-slate-400 -mt-2 mb-4">
+            At least 8 characters, with a letter, a number and a symbol.
+          </p>
 
           <Input
             icon={Lock}

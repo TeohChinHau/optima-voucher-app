@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Camera } from "lucide-react";
+import { Camera, Eye, EyeOff } from "lucide-react";
 import {
   getProfile,
   updateProfile,
@@ -11,6 +11,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import Button from "../components/Button";
 import { API_BASE_URL } from "../api/client";
+import { validatePassword } from "../utils/validatePassword";
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
@@ -23,6 +24,8 @@ export default function ProfilePage() {
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { token, login: setAuth } = useAuth();
@@ -64,6 +67,15 @@ export default function ProfilePage() {
   };
 
   const handleChangePassword = async () => {
+    if (!currentPassword) {
+      showToast("Please enter your current password", "error");
+      return;
+    }
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      showToast(passwordError, "error");
+      return;
+    }
     try {
       const res = await changePassword(currentPassword, newPassword);
       if (res.data.success) {
@@ -150,10 +162,8 @@ export default function ProfilePage() {
             onChange={(e) => setGender(e.target.value)}
             className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-orange-400"
           >
-            <option value="">Prefer not to say</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
-            <option value="Other">Other</option>
           </select>
 
           <label className="text-sm text-slate-400 mb-1 block">
@@ -170,20 +180,41 @@ export default function ProfilePage() {
         <div className="bg-slate-800 rounded-2xl p-6">
           <h2 className="font-semibold mb-4">Change Password</h2>
 
-          <input
-            type="password"
-            placeholder="Current Password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-orange-400"
-          />
-          <input
-            type="password"
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-orange-400"
-          />
+          <div className="relative mb-3">
+            <input
+              type={showCurrent ? "text" : "password"}
+              placeholder="Current Password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-3 pr-10 py-2 focus:outline-none focus:border-orange-400"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrent((s) => !s)}
+              aria-label={showCurrent ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          <div className="relative mb-4">
+            <input
+              type={showNew ? "text" : "password"}
+              placeholder="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg pl-3 pr-10 py-2 focus:outline-none focus:border-orange-400"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNew((s) => !s)}
+              aria-label={showNew ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
 
           <Button onClick={handleChangePassword} variant="secondary">
             Update Password
