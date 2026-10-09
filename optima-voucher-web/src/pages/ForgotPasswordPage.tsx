@@ -1,14 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Lock, Mail } from "lucide-react";
+import { forgotPassword } from "../api/authApi";
+import { useToast } from "../context/ToastContext";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showToast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await forgotPassword(email);
+      setSubmitted(true);
+    } catch (err: any) {
+      showToast(
+        err.response?.data?.message || "Something went wrong. Try again.",
+        "error",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -48,9 +64,10 @@ export default function ForgotPasswordPage() {
               </div>
               <button
                 type="submit"
-                className="w-full bg-slate-200 text-slate-900 rounded-full py-3 font-bold hover:bg-white transition mb-4"
+                disabled={isSubmitting}
+                className="w-full bg-slate-200 text-slate-900 rounded-full py-3 font-bold hover:bg-white transition mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reset Password
+                {isSubmitting ? "Sending..." : "Reset Password"}
               </button>
               <Link to="/login" className="block text-center text-slate-900 font-bold underline">
                 Back to Login

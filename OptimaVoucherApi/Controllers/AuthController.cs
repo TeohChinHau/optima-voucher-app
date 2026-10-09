@@ -10,6 +10,7 @@ using OptimaVoucherApi.Models;
 using OptimaVoucherApi.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Cryptography;
 
 namespace OptimaVoucherApi.Controllers;
 
@@ -140,6 +141,58 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new ApiResponse<object> { Success = true, Data = new { url = user.ProfilePictureUrl } });
+    }
+
+    private static string HashToken(string token) =>
+    Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+
+    [EnableRateLimiting("auth")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
+
+        if (user != null)
+        {
+            var rawToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+            user.PasswordResetTokenHash = HashToken(rawToken);
+            user.PasswordResetExpiry = DateTime.UtcNow.AddMinutes(15);
+            await _db.SaveChangesAsync();
+
+            var link = $"http://localhost:5173/reset-password?token={rawToken}";
+            // TODO: replace with a real email send (Resend/SendGrid)
+            Console.WriteLine($"[DEV] Password reset link for {user.Email}: {link}");
+        }
+
+        // Same response either way, so attackers can't discover which emails exist
+        return Ok(new ApiResponse<object>
+        {
+            Success = true,
+            Message = "If that email is registered, a reset link has been sent."
+        });
+    }
+
+    [EnableRateLimiting("auth")]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+    {
+        var hash = HashToken(req.Token);
+        var user = await _db.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetTokenHash == hash && u.PasswordResetExpiry > DateTime.UtcNow);
+
+        if (user == null)
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Message = "This reset link is invalid or has expired."
+            });
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+        user.PasswordResetTokenHash = null;   // single use
+        user.PasswordResetExpiry = null;
+        await _db.SaveChangesAsync();
+
+        return Ok(new ApiResponse<object> { Success = true, Message = "Password has been reset." });
     }
 
     private string GenerateToken(User user)

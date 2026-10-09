@@ -5,3 +5,5 @@ public record LoginRequest(string Email, string Password);
 public record AuthResponse(string Token, string FullName, int Points);
 public record UpdateProfileRequest(string FullName, string? Gender);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Token, string NewPassword);

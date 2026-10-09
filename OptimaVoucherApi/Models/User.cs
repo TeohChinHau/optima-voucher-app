@@ -10,4 +10,6 @@ public class User
     public string MembershipTier { get; set; } = "Standard";
     public string? Gender { get; set; }
     public string? ProfilePictureUrl { get; set; }
+    public string? PasswordResetTokenHash { get; set; }
+    public DateTime? PasswordResetExpiry { get; set; }
 }

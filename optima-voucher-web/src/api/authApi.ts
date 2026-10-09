@@ -22,6 +22,12 @@ export const updateProfile = (fullName: string, gender: string) =>
 export const changePassword = (currentPassword: string, newPassword: string) =>
   client.post<ApiResponse<null>>("/auth/change-password", { currentPassword, newPassword });
 
+export const forgotPassword = (email: string) =>
+  client.post<ApiResponse<null>>("/auth/forgot-password", { email });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  client.post<ApiResponse<null>>("/auth/reset-password", { token, newPassword });
+
 export const uploadProfilePicture = (file: File) => {
   const formData = new FormData();
   formData.append("file", file);
