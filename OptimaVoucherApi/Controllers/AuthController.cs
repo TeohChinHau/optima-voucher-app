@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Cryptography;
 using OptimaVoucherApi.Services;
+using Google.Apis.Auth;
 
 namespace OptimaVoucherApi.Controllers;
 
@@ -75,6 +76,64 @@ public class AuthController : ControllerBase
         });
     }
 
+    [EnableRateLimiting("auth")]
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest req)
+    {
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            payload = await GoogleJsonWebSignature.ValidateAsync(
+                req.Credential,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _config["Google:ClientId"]! }
+                });
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized(new ApiResponse<object> { Success = false, Message = "Invalid Google sign-in." });
+        }
+
+        if (!payload.EmailVerified)
+            return BadRequest(new ApiResponse<object> { Success = false, Message = "Your Google email is not verified." });
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.GoogleId == payload.Subject);
+
+        if (user == null)
+        {
+            var existing = await _db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+            if (existing != null)
+            {
+                // Deliberately NOT auto-linking (see note below)
+                return Conflict(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "An account with this email already exists. Please log in with your password."
+                });
+            }
+
+            user = new User
+            {
+                Email = payload.Email,
+                FullName = payload.Name ?? payload.Email,
+                GoogleId = payload.Subject,
+                PasswordHash = null,
+                Points = 0
+            };
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+        }
+
+        var token = GenerateToken(user);
+        return Ok(new ApiResponse<AuthResponse>
+        {
+            Success = true,
+            Message = "Login successful",
+            Data = new AuthResponse(token, user.FullName, user.Points)
+        });
+    }
+
     [Authorize]
     [HttpGet("me")]
     public async Task<IActionResult> GetProfile()
@@ -121,6 +180,12 @@ public class AuthController : ControllerBase
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var user = await _db.Users.FindAsync(userId);
         if (user == null) return NotFound();
+        if (user.PasswordHash == null)
+            return BadRequest(new ApiResponse<object>
+            {
+                Success = false,
+                Message = "This account signs in with Google and has no password. Use Forgot Password to set one."
+            });
 
         if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.PasswordHash))
             return BadRequest(new ApiResponse<object> { Success = false, Message = "Current password is incorrect" });

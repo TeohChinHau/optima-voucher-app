@@ -6,6 +6,7 @@ import { useToast } from "../context/ToastContext";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import { validatePassword } from "../utils/validatePassword";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState("");
@@ -119,6 +120,14 @@ export default function SignUpPage() {
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Creating account..." : "Sign Up"}
           </Button>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-slate-700" />
+            <span className="text-slate-500 text-sm">or</span>
+            <div className="flex-1 h-px bg-slate-700" />
+          </div>
+
+          <GoogleSignInButton />
 
           <p className="text-sm mt-5 text-slate-400">
             Have an account?{" "}

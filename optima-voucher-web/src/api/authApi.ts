@@ -13,6 +13,9 @@ export const signup = (email: string, password: string, fullName: string) =>
 export const login = (email: string, password: string) =>
   client.post<ApiResponse<AuthData>>("/auth/login", { email, password });
 
+export const googleLogin = (credential: string) =>
+  client.post<ApiResponse<AuthData>>("/auth/google", { credential });
+
 export const getProfile = () =>
   client.get<ApiResponse<UserProfile>>("/auth/me");
 

@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -88,6 +89,8 @@ export default function LoginPage() {
             <span className="text-slate-500 text-sm">or</span>
             <div className="flex-1 h-px bg-slate-700" />
           </div>
+
+          <GoogleSignInButton />
 
           <Link
             to="/signup"

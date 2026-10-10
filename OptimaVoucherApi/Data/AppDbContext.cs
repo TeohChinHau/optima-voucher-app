@@ -16,5 +16,6 @@ public class AppDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+        modelBuilder.Entity<User>().HasIndex(u => u.GoogleId).IsUnique();
     }
 }
